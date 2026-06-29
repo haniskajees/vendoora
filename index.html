@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vendoora</title>
+  <meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/paybysquare@1.0.3/dist/paybysquare.min.js"></script>
+
+<style>
+
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #f5f5f5;
+  
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+header {
+  text-align: center;
+  font-size: 40px;
+  font-weight: bold;
+  padding: 10px;
+  border-bottom: 2px solid black;
+}
+
+.container {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.list {
+  flex: 2;
+  padding: 15px;
+  overflow-y: auto;
+}
+
+.cart {
+  flex: 1;
+  padding: 15px;
+  border-left: 2px solid black;
+  overflow-y: auto;
+}
+
+h2 {
+  margin-top: 10px;
+}
+
+/* GRID ITEMS */
+.items {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ITEM STYLE */
+.item {
+  background: #d89c8f;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* CART ITEMS */
+.cart-item {
+  background: #d89c8f;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+/* BOTTOM BAR */
+.bottom {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border-top: 2px solid black;
+  position: sticky;
+  bottom: 0;
+  background: white;
+}
+
+.done-btn {
+  flex: 3;
+  background: #d89c8f;
+  padding: 20px;
+  text-align: center;
+  font-weight: bold;
+  border-radius: 10px;
+}
+
+.total-btn {
+  flex: 1;
+  background: #d89c8f;
+  padding: 20px;
+  text-align: center;
+  font-weight: bold;
+  border-radius: 10px;
+}
+
+.clear-btn {
+  flex: 1;
+  background: #d89c8f;
+  padding: 20px;
+  text-align: center;
+  font-weight: bold;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.app {
+  width: 414px;
+  height: 100vh; /* 👈 important */
+  background: white;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  text-align: center;
+  font-size: 28px;
+  font-weight: bold;
+  padding: 15px;
+  border-bottom: 2px solid black;
+  flex-shrink: 0;
+}
+
+.item:active {
+  transform: scale(0.95);
+}
+
+.cart-item:active {
+  transform: scale(0.95);
+}
+
+button {
+  width: auto;
+  display: inline-block;
+  padding: 10px 15px;
+}
+
+#qrScreen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start; /* 🔥 important */
+  padding: 20px;
+}
+
+canvas {
+  width: 200px;
+  height: 200px;
+  margin: 15px 0;
+}
+
+#qr-screen button {
+    padding: 10px 20px;
+    margin: 5px;
+    font-size: 16px;
+  color: black;
+}
+
+.main-btn {
+  padding: 15px 25px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: none;
+  background: #d89c8f;
+  color: white;
+  cursor: pointer;
+}
+
+.main-btn:hover {
+  opacity: 0.85;
+}
+
+#qrcode2 {
+  display: block;
+  margin: 20px auto;  /* centers it */
+}
+
+.qr {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+}
+
+.qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  gap: 15px;
+}
+
+.scan-text {
+  font-size: 18px;
+}
+
+#qr1, #qr2 {
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+}
+
+.main-btn {
+  width: 80%;
+  max-width: 300px;
+  padding: 15px 25px;
+  font-size: 18px;
+  border-radius: 10px;
+  border: none;
+  background: #d89c8f;
+  color: black; /* 👈 CHANGE THIS */
+  cursor: pointer;
+}
+
+/* CART ITEM BTN (JUST SO I KNOW) */
+.cart-item-btn {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
+  padding: 12px;
+
+  background: #d89c8f;
+  border: none;
+  border-radius: 10px;
+
+  font-size: 16px;
+  text-align: left;
+
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.cart-item-btn:hover {
+  background: #e0e0e0;
+  transform: scale(1.02);
+}
+</style>
+</head>
+
+<body>
+
+  <!-- MAIN PAGE -->
+  <div id="main-page" class="app">
+  
+    <header>VENDOORA</header>
+
+    <div class="container">
+      <!-- LEFT SIDE -->
+      <div class="list">
+        <h2>SNACKS</h2>
+
+        <div class="items">
+          <div class="item" onclick="addItem('Müsli tyčinka', 1)">Müsli tyčinka</div>
+          <div class="item" onclick="addItem('Horálka', 1.2)">Horálka</div>
+          <div class="item" onclick="addItem('Mila', 1.1)">Mila</div>
+          <div class="item" onclick="addItem('Snickers', 1.5)">Snickers</div>
+          <div class="item" onclick="addItem('Čipsy', 1.3)">Čipsy</div>
+        </div>
+
+        <h2>DRINKS</h2>  
+
+        <div class="items">
+          <div class="item" onclick="addItem('Káva', 1)">Káva</div>
+          <div class="item" onclick="addItem('Čaj', 1)">Čaj</div>
+          <div class="item" onclick="addItem('Vinea', 1.5)">Vinea</div>
+          <div class="item" onclick="addItem('Minerálka', 1)">Minerálka</div>
+          <div class="item" onclick="addItem('Maté', 1.8)">Maté</div>
+          <div class="item" onclick="addItem('Kofola', 1.5)">Kofola</div>
+          <div class="item" onclick="addItem('Pivo', 2)">Pivo</div>
+          <div class="item" onclick="addItem('Radler', 1.8)">Radler</div>
+          <div class="item" onclick="addItem('Gin Tonic', 4)">Gin Tonic</div>
+          <div class="item" onclick="addItem('Cuba Libre', 4)">Cuba Libre</div>
+          <div class="item" onclick="addItem('Víno', 3)">Víno</div>
+        </div>
+      </div>
+
+      <!-- RIGHT SIDE -->
+      <div class="cart">
+        <h2>CART</h2>
+        <div id="cart-items"></div>
+      </div>
+    </div>
+
+    <div class="bottom">
+      <div id="doneBtn" class="done-btn" onclick="handleDoneClick()">DONE + CREATE QR</div>
+      <div class="total-btn" id="total">€0</div>
+      <div class="clear-btn" onclick="clearCart()">CLEAR</div>
+    </div>
+
+  </div> <!-- ✅ MAIN PAGE ENDS HERE -->
+
+
+  <!-- ✅ QR SCREEN OUTSIDE -->
+  <div id="qrScreen" style="display:none;" class="app">
+
+    <header>VENDOORA</header>
+  
+    <div class="qr-container">
+      <p class="scan-text">Scan to pay</p>
+  
+      <div id="qr1"></div>
+      <div id="qr2" style="display:none;"></div>
+  
+      <button class="main-btn" onclick="paymentSuccess()">Payment Successful</button>
+      <button class="main-btn" onclick="goBack()">Back</button>
+      <button class="main-btn" onclick="switchQR()">Try other way</button>
+    </div>
+  
+  </div>
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="script.js"></script>
+
+</body>
+</html>
