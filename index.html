@@ -321,10 +321,62 @@ button {
 
 .payment-checking {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
   color: var(--terracotta);
   font-size: 0.95rem;
+}
+
+.payment-checking-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.payment-actions {
+  display: flex;
+  gap: 20px;
+}
+
+.icon-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.icon-btn-cancel {
+  background: #fff;
+  color: var(--terracotta);
+  border: 1px solid var(--terracotta);
+}
+
+.icon-btn-cancel:hover {
+  background: var(--terracotta);
+  color: #fff;
+}
+
+.icon-btn-check {
+  width: auto;
+  height: auto;
+  padding: 12px 24px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  background: var(--terracotta);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(155,85,58,0.35);
+}
+
+.icon-btn-check:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(155,85,58,0.45);
 }
 
 .spinner-small {
@@ -353,6 +405,21 @@ button {
   gap: 12px;
   text-align: center;
   color: var(--terracotta);
+}
+
+.payment-email {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.payment-email-input {
+  padding: 14px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--terracotta);
+  font-size: 1rem;
+  font-family: inherit;
 }
 </style>
 </head>
@@ -387,7 +454,12 @@ button {
   <!-- PAYMENT MODAL -->
   <div id="payment-modal" class="modal-overlay">
     <div class="modal-card">
-      <div id="payment-loading" class="payment-loading">
+      <div id="payment-email" class="payment-email" style="display: none;">
+        <h2>Email (nepovinné)</h2>
+        <input type="email" id="payment-email-input" class="payment-email-input" placeholder="tvoj@email.sk" />
+        <div class="done-btn" onclick="submitPaymentEmail()">Pokračovať</div>
+      </div>
+      <div id="payment-loading" class="payment-loading" style="display: none;">
         <div class="spinner"></div>
         <p>Vytváram platbu…</p>
       </div>
@@ -399,8 +471,10 @@ button {
         <div id="payment-success" class="payment-success" style="display: none;">✓</div>
 
         <div id="payment-checking" class="payment-checking">
-          <div class="spinner spinner-small"></div>
-          <p>Čakám na potvrdenie platby…</p>
+          <div class="payment-checking-status">
+            <div class="spinner spinner-small"></div>
+            <p>Čakám na potvrdenie platby…</p>
+          </div>
         </div>
 
         <div id="payment-failed" class="payment-failed" style="display: none;">
@@ -408,7 +482,10 @@ button {
           <div class="clear-btn" onclick="checkPaymentNow()">Skontrolovať znova</div>
         </div>
 
-        <div class="clear-btn" onclick="closePaymentModal()">Zavrieť</div>
+        <div class="payment-actions">
+          <div id="payment-cancel-btn" class="icon-btn icon-btn-cancel" onclick="cancelPayment()" title="Zrušiť platbu">🗑</div>
+          <div class="icon-btn icon-btn-check" onclick="finishPaymentModal()" title="Zavrieť">Zavrieť</div>
+        </div>
       </div>
     </div>
   </div>

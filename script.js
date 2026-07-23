@@ -1,7 +1,6 @@
 // CART DATA
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
-let total = 0;
-let currentSpot = localStorage.getItem('currentSpot') || 'buffet';
+let currentSpot = localStorage.getItem('currentSpot') || 'bufet';
 const saleItems = [
   {
     name: 'Vstup',
@@ -18,46 +17,43 @@ const saleItems = [
   },
   {
     name: 'Bufet',
-    transactionType: 'buffet',
+    transactionType: 'bufet',
     categories: [
       {
         name: 'Drinks',
         items: [
-          { name: 'Kofola 0,5l', price: 1.5 },
-          { name: 'Kofola 0,3l', price: 1.5 },
-          { name: 'Vinea 0,5l', price: 1.5 },
-          { name: 'Vinea 0,3l', price: 1.5 },
-          { name: 'Minerálka', price: 1 },
-          { name: 'Coca Cola', price: 1 },
-          { name: 'Sprite', price: 1 },
-          { name: 'Tonic', price: 1 },
-          { name: 'Džús', price: 1 },
-          { name: 'Káva', price: 1 },
+          { name: 'Kofola 5dcl', price: 2 },
+          { name: 'Kofola 3dcl', price: 1.5 },
+          { name: 'Vinea 3dcl', price: 1.5 },
+          { name: 'Minerálka 3dcl', price: 1 },
+          { name: 'Džús 2dcl', price: 1.5 },
+          { name: 'Káva', price: 2 },
         ],
       },
       {
         name: 'Alcohol',
         items: [
-          { name: 'Pivo 0,5l', price: 1 },
-          { name: 'Pivo 0,3l', price: 1 },
-          { name: 'Radler 0,5l', price: 1 },
-          { name: 'Radler 0,3l', price: 1 },
-          { name: 'Víno', price: 1.5 },
-          { name: 'Cuba Libre', price: 1 },
-          { name: 'Gin Tonic', price: 1.8 },
+          { name: 'Pivo 5dcl', price: 2 },
+          { name: 'Pivo 3dcl', price: 1.5 },
+          { name: 'Radler 5dcl', price: 2 },
+          { name: 'Radler 3dcl', price: 1.5 },
+          { name: 'Prosecco 2dcl', price: 5 },
+          { name: 'Aperol Spritz 3dcl', price: 7 },
+          { name: 'Gin Tonic', price: 4 },
+          { name: 'Cuba Libre', price: 4 },
         ],
       },
       {
         name: 'Snacks',
         items: [
-          { name: 'Müsli tyčinka', price: 1 },
-          { name: 'Oriešková tyčinka', price: 1 },
-          { name: 'Horalka', price: 1.2 },
-          { name: 'Snickers', price: 1.5 },
-          { name: 'Žížaly', price: 1.5 },
-          { name: 'Soletky', price: 1.1 },
-          { name: 'Čipsy', price: 1.3 },
-          { name: 'Chrumky', price: 1.3 },
+          { name: 'Müsli tyčinka', price: 1.5 },
+          { name: 'Oriešková tyčinka', price: 1.5 },
+          { name: 'Horalka', price: 1.5 },
+          { name: 'Snickers', price: 2 },
+          { name: 'Žížaly', price: 2 },
+          { name: 'Soletky', price: 1 },
+          { name: 'Čipsy', price: 1.5 },
+          { name: 'Chrumky', price: 1.5 },
         ],
       },
     ],
@@ -202,9 +198,6 @@ function renderCart() {
   const cartContainer = document.getElementById("cart-items");
   cartContainer.innerHTML = "";
 
-  const grouped = {};
-
-  // 🔹 group items
   cart.forEach((item, index) => {
     const btn = document.createElement("button");
     btn.className = "cart-item-btn";
@@ -224,28 +217,11 @@ function renderCart() {
 
     cartContainer.appendChild(btn);
   });
-
-  // 🔹 display grouped items
-  Object.keys(grouped).forEach(name => {
-    const div = document.createElement("div");
-    div.onclick = () => {
-      // remove ONE instance when clicked
-      const index = cart.findIndex(item => item.name === name);
-      if (index !== -1) {
-        cart.splice(index, 1);
-        renderCart();
-        updateTotal();
-      }
-    };
-
-    cartContainer.appendChild(div);
-  });
 }
 
 // CLEAR CART
 function clearCart() {
   cart = [];
-  total = 0;
   renderCart();
   updateTotal();
   saveCart();
@@ -262,25 +238,60 @@ let paymentCheckTimeoutId = null;
 let paymentVariableSymbol = null;
 
 // PAY BUTTON
-async function handleDoneClick() {
+function handleDoneClick() {
   if (cart.length === 0) {
     return;
   }
 
-  openPaymentModal();
+  if (currentSpot === 'tickets') {
+    openPaymentEmailPrompt();
+  } else {
+    createPayment(null);
+  }
+}
+
+// OPEN PAYMENT MODAL (ASKS FOR OPTIONAL EMAIL BEFORE CREATING THE PAYMENT)
+function openPaymentEmailPrompt() {
+  stopPaymentPolling();
+
+  document.getElementById("payment-email-input").value = "";
+  document.getElementById("payment-email").style.display = "flex";
+  document.getElementById("payment-loading").style.display = "none";
+  document.getElementById("payment-result").style.display = "none";
+  document.getElementById("payment-modal").style.display = "flex";
+}
+
+// EMAIL STEP CONFIRMED, CREATE THE PAYMENT
+function submitPaymentEmail() {
+  const email = document.getElementById("payment-email-input").value.trim();
+  createPayment(email);
+}
+
+async function createPayment(email) {
+  stopPaymentPolling();
+
+  document.getElementById("payment-email").style.display = "none";
+  document.getElementById("payment-loading").style.display = "flex";
+  document.getElementById("payment-result").style.display = "none";
+  document.getElementById("payment-modal").style.display = "flex";
 
   try {
+    const body = {
+      transactionType: currentSpot,
+      items: cart.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    };
+    if (email) {
+      body.email = email;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/payment/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        transactionType: currentSpot,
-        items: cart.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -295,19 +306,17 @@ async function handleDoneClick() {
   }
 }
 
-// OPEN PAYMENT MODAL (SHOWS PROGRESS INDICATOR)
-function openPaymentModal() {
-  stopPaymentPolling();
-
-  document.getElementById("payment-loading").style.display = "flex";
-  document.getElementById("payment-result").style.display = "none";
-  document.getElementById("payment-modal").style.display = "flex";
-}
-
 // CLOSE PAYMENT MODAL
 function closePaymentModal() {
   stopPaymentPolling();
+  document.getElementById("payment-email").style.display = "none";
   document.getElementById("payment-modal").style.display = "none";
+}
+
+// "ZAVRIEŤ" BUTTON: CLOSE THE MODAL AND CLEAR THE CART (PAYMENT REVIEW IS DONE)
+function finishPaymentModal() {
+  clearCart();
+  closePaymentModal();
 }
 
 // SHOW PAYMENT RESULT (AMOUNT, CURRENCY, QR CODE)
@@ -324,6 +333,7 @@ function showPaymentResult(payment) {
   document.getElementById("payment-success").style.display = "none";
   document.getElementById("payment-checking").style.display = "flex";
   document.getElementById("payment-failed").style.display = "none";
+  document.getElementById("payment-cancel-btn").style.display = "flex";
 
   document.getElementById("payment-loading").style.display = "none";
   document.getElementById("payment-result").style.display = "flex";
@@ -354,18 +364,19 @@ function stopPaymentPolling() {
 
 // MANUALLY TRIGGER A CHECK (POLLING TICK OR "SKONTROLOVAŤ ZNOVA" BUTTON)
 async function checkPaymentNow() {
-  if (!paymentVariableSymbol) {
+  const variableSymbol = paymentVariableSymbol;
+  if (!variableSymbol) {
     return;
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/payment/check?vs=${encodeURIComponent(paymentVariableSymbol)}`);
+    const response = await fetch(`${API_BASE_URL}/api/payment/check?vs=${encodeURIComponent(variableSymbol)}`);
     if (!response.ok) {
       return;
     }
 
     const result = await response.json();
-    if (result.found) {
+    if (result.found && paymentVariableSymbol === variableSymbol) {
       showPaymentConfirmed();
     }
   } catch (err) {
@@ -373,14 +384,35 @@ async function checkPaymentNow() {
   }
 }
 
+// CANCEL PAYMENT (TRASH ICON): DELETE THE RECORD ON THE SERVER AND CLOSE THE MODAL
+async function cancelPayment() {
+  const variableSymbol = paymentVariableSymbol;
+  stopPaymentPolling();
+  paymentVariableSymbol = null;
+
+  if (variableSymbol) {
+    try {
+      await fetch(`${API_BASE_URL}/api/payment?vs=${encodeURIComponent(variableSymbol)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      // ignore network errors; payment record cleanup is best-effort
+    }
+  }
+
+  closePaymentModal();
+}
+
 // SHOW BIG GREEN CHECK
 function showPaymentConfirmed() {
   stopPaymentPolling();
+  clearCart();
 
   document.getElementById("payment-qr").style.display = "none";
   document.getElementById("payment-checking").style.display = "none";
   document.getElementById("payment-failed").style.display = "none";
   document.getElementById("payment-success").style.display = "flex";
+  document.getElementById("payment-cancel-btn").style.display = "none";
 }
 
 // SHOW "PAYMENT DIDN'T GO THROUGH" MESSAGE WITH MANUAL RETRY
@@ -389,4 +421,5 @@ function showPaymentFailed() {
 
   document.getElementById("payment-checking").style.display = "none";
   document.getElementById("payment-failed").style.display = "flex";
+  document.getElementById("payment-cancel-btn").style.display = "none";
 }
