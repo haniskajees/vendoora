@@ -1,13 +1,171 @@
-alert("JS LOADED");
-console.log("JS CONNECTED");
-
-const IBAN = "SK6767676767679999999922"; // fake for now
-const NAME = "Festival Buffet";
-
 // CART DATA
-let cart = [];
+let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let total = 0;
-let showingFirstQR = true;
+let currentSpot = localStorage.getItem('currentSpot') || 'buffet';
+const saleItems = [
+  {
+    name: 'Vstup',
+    transactionType: 'tickets',
+    categories: [
+      {
+        name: 'Entry',
+        items: [
+          { name: 'Dospelý (15+)', price: 20 },
+          { name: 'Dieťa (do 15 r.)', price: 10 },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'Bufet',
+    transactionType: 'buffet',
+    categories: [
+      {
+        name: 'Drinks',
+        items: [
+          { name: 'Kofola 0,5l', price: 1.5 },
+          { name: 'Kofola 0,3l', price: 1.5 },
+          { name: 'Vinea 0,5l', price: 1.5 },
+          { name: 'Vinea 0,3l', price: 1.5 },
+          { name: 'Minerálka', price: 1 },
+          { name: 'Coca Cola', price: 1 },
+          { name: 'Sprite', price: 1 },
+          { name: 'Tonic', price: 1 },
+          { name: 'Džús', price: 1 },
+          { name: 'Káva', price: 1 },
+        ],
+      },
+      {
+        name: 'Alcohol',
+        items: [
+          { name: 'Pivo 0,5l', price: 1 },
+          { name: 'Pivo 0,3l', price: 1 },
+          { name: 'Radler 0,5l', price: 1 },
+          { name: 'Radler 0,3l', price: 1 },
+          { name: 'Víno', price: 1.5 },
+          { name: 'Cuba Libre', price: 1 },
+          { name: 'Gin Tonic', price: 1.8 },
+        ],
+      },
+      {
+        name: 'Snacks',
+        items: [
+          { name: 'Müsli tyčinka', price: 1 },
+          { name: 'Oriešková tyčinka', price: 1 },
+          { name: 'Horalka', price: 1.2 },
+          { name: 'Snickers', price: 1.5 },
+          { name: 'Žížaly', price: 1.5 },
+          { name: 'Soletky', price: 1.1 },
+          { name: 'Čipsy', price: 1.3 },
+          { name: 'Chrumky', price: 1.3 },
+        ],
+      },
+    ],
+  },
+  {
+    name: 'Gastro',
+    transactionType: 'food',
+    categories: [
+      {
+        name: 'Food',
+        items: [
+          { name: 'Gulášová', price: 4.5 },
+          { name: 'Rezeň so šalátom', price: 8 },
+          { name: 'Hranolky s trhaným mäsom', price: 8 },
+        ],
+      },
+    ],
+  },
+];
+
+// GET CURRENTLY SELECTED SALE ITEM (SPOT)
+function getCurrentSaleItem() {
+  return saleItems.find(saleItem => saleItem.transactionType === currentSpot) || saleItems[0];
+}
+
+// UPDATE HEADER TEXT
+function updateHeader() {
+  document.getElementById("app-header").textContent = getCurrentSaleItem().name + " - Čaj o 41vej";
+}
+
+// OPEN SPOT PICKER
+function openSpotPicker() {
+  const optionsContainer = document.getElementById("spot-options");
+  optionsContainer.innerHTML = "";
+
+  saleItems.forEach(saleItem => {
+    const option = document.createElement("div");
+    option.className = "spot-option";
+    option.textContent = saleItem.name;
+    option.onclick = () => selectSpot(saleItem.transactionType);
+    optionsContainer.appendChild(option);
+  });
+
+  document.getElementById("spot-modal").style.display = "flex";
+}
+
+// CLOSE SPOT PICKER
+function closeSpotPicker() {
+  document.getElementById("spot-modal").style.display = "none";
+}
+
+// SELECT SPOT
+function selectSpot(transactionType) {
+  currentSpot = transactionType;
+  localStorage.setItem('currentSpot', transactionType);
+  closeSpotPicker();
+  renderCategories();
+  updateHeader();
+  clearCart();
+}
+
+// RENDER CATEGORIES + ITEMS
+function renderCategories() {
+  const container = document.getElementById("categories-container");
+  container.innerHTML = "";
+
+  const categories = getCurrentSaleItem().categories;
+
+  categories.forEach(category => {
+    const heading = document.createElement("h2");
+    heading.textContent = category.name.toUpperCase();
+    container.appendChild(heading);
+
+    const itemsDiv = document.createElement("div");
+    itemsDiv.className = "items";
+
+    category.items.forEach(item => {
+      const itemDiv = document.createElement("div");
+      itemDiv.className = "item";
+      itemDiv.onclick = () => addItem(item.name, item.price);
+
+      const nameSpan = document.createElement("div");
+      nameSpan.textContent = item.name;
+
+      const priceSpan = document.createElement("div");
+      priceSpan.className = "item-price";
+      priceSpan.textContent = `${item.price.toFixed(2)}€`;
+
+      itemDiv.appendChild(nameSpan);
+      itemDiv.appendChild(priceSpan);
+      itemsDiv.appendChild(itemDiv);
+    });
+
+    container.appendChild(itemsDiv);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderCategories();
+  updateHeader();
+  renderCart();
+  updateTotal();
+});
+
+// SAVE CART
+function saveCart() {
+  localStorage.setItem('cart', JSON.stringify(cart));
+}
 
 // ADD ITEM
 function addItem(name, price) {
@@ -25,6 +183,7 @@ function addItem(name, price) {
 
   renderCart();
   updateTotal();
+  saveCart();
 }
 
 //UPDATE TOTAL
@@ -32,10 +191,10 @@ function updateTotal() {
   let total = 0;
 
   cart.forEach(item => {
-    total += item.price;
+    total += item.price * item.quantity;
   });
 
-  document.getElementById("total").textContent = total.toFixed(2) + "€";
+  document.getElementById("doneBtn").textContent = `PAY ${total.toFixed(2)} EUR`;
 }
 
 //RENDER CART
@@ -50,7 +209,7 @@ function renderCart() {
     const btn = document.createElement("button");
     btn.className = "cart-item-btn";
   
-    btn.innerText = `${item.name} x${item.quantity}`;
+    btn.innerText = `${item.quantity}x ${item.name}`;
   
     btn.onclick = () => {
       if (item.quantity > 1) {
@@ -58,20 +217,17 @@ function renderCart() {
       } else {
         cart.splice(index, 1);
       }
-    
-      updateCart();
+      renderCart();
+      updateTotal();
+      saveCart();
     };
-  
+
     cartContainer.appendChild(btn);
   });
 
   // 🔹 display grouped items
   Object.keys(grouped).forEach(name => {
     const div = document.createElement("div");
-
-    const count = grouped[name];
-    div.textContent = count > 1 ? `${name} ${count}x` : name;
-
     div.onclick = () => {
       // remove ONE instance when clicked
       const index = cart.findIndex(item => item.name === name);
@@ -92,169 +248,145 @@ function clearCart() {
   total = 0;
   renderCart();
   updateTotal();
+  saveCart();
 }
 
-// GO TO QR SCREEN
-function handleDoneClick() {
+// PAYMENT HELPER VARS
+const API_BASE_URL = '';
+
+const PAYMENT_CHECK_INTERVAL_MS = 5000;
+const PAYMENT_CHECK_TIMEOUT_MS = 60000;
+
+let paymentCheckIntervalId = null;
+let paymentCheckTimeoutId = null;
+let paymentVariableSymbol = null;
+
+// PAY BUTTON
+async function handleDoneClick() {
   if (cart.length === 0) {
-    alert("Cart is empty!");
     return;
   }
 
-  document.getElementById("main-page").style.display = "none";
-  document.getElementById("qrScreen").style.display = "block";
+  openPaymentModal();
 
-  generateQRCodes();
-}
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/payment/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transactionType: currentSpot,
+        items: cart.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+      }),
+    });
 
-// GO BACK
-function goBack() {
-  document.getElementById("qrScreen").style.display = "none";
-  document.getElementById("main-page").style.display = "block";
+    if (!response.ok) {
+      throw new Error('Payment registration failed');
+    }
 
-  showingFirstQR = true;
-  document.getElementById("qr1").style.display = "block";
-  document.getElementById("qr2").style.display = "none";
-}
-
-// SWITCH QR
-function switchQR() {
-  showingFirstQR = !showingFirstQR;
-
-  document.getElementById("qr1").style.display = showingFirstQR ? "block" : "none";
-  document.getElementById("qr2").style.display = showingFirstQR ? "none" : "block";
-}
-
-// PAYMENT SUCCESS
-function paymentSuccess() {
-  alert("Payment successful!");
-  clearCart();
-  goBack();
-}
-
-//GENERATE QR CODES
-//THIS IS THE SHIT UR WORKING ON MOST OF THE TIMESSSSSSSSS
-//LOOK HEREE
-function generateQRCodes() {
-  const qr1 = document.getElementById("qr1");
-  const qr2 = document.getElementById("qr2");
-
-  qr1.innerHTML = "";
-  qr2.innerHTML = "";
-
-// ✅ PUT IT HERE (THIS IS THE FIX)
-let total = 0;
-cart.forEach(item => {
-  total += item.price;
-});
-
-  // 🧾 Items
-  let itemsText = cart.map(item => `${item.name} x${item.quantity}`).join(", ");
-
-  // 💰 Amount
-  let amount = total.toFixed(2);
-
-  // 📝 Note
-  let note = "Festival buffet";
-
-  // 🏦 IBAN
-  let iban = "SK6767676767679999999922";
-
-  const paymentData = {
-    payments: [
-      {
-        amount: parseFloat(amount),
-        currencyCode: "EUR",
-        iban: iban,
-        variableSymbol: Date.now().toString().slice(-10),
-        constantSymbol: "0308",
-        specificSymbol: "0000",
-        paymentNote: cart.map(i => i.name).join(", ") || "Payment"
-      }
-    ]
-  };
-  
-  // ✅ REAL encoding
-  const payBySquareString = PayBySquare.generate(paymentData);
-
-  new QRCode(qr1, {
-    text: payBySquareString,
-    width: 220,
-    height: 220
-  });
-
-  // =========================
-  // ✅ QR2 (manual fallback)
-  // =========================
-// 🔗 CREATE URL QR (NEW SYSTEM)
-
-total = 0;
-cart.forEach(item => {
-  total += item.price;
-});
-
-// items formatted
-itemsText = cart.map(i => `${i.name} x${i.quantity}`).join(",");
-
-// ⚠️ CHANGE THIS LATER TO YOUR REAL LINK
-const baseURL = "https://YOURUSERNAME.github.io/vendoora/pay.html";
-
-const url = `${baseURL}?iban=${encodeURIComponent(iban)}&amount=${total.toFixed(2)}&note=Festival%20buffet&items=${encodeURIComponent(itemsText)}`;
-
-new QRCode(qr2, {
-  text: url,
-  width: 220,
-  height: 220
-});
-
-// 👇 THIS IS "DIRECTLY UNDER"
-document.getElementById("copyIbanBtn").addEventListener("click", () => {
-  navigator.clipboard.writeText(iban);
-  alert("IBAN copied!");
-});
-
-total = 0;
-
-cart.forEach(item => {
-  total += item.price;
-});
-
-const grouped = {};
-
-cart.forEach(item => {
-  if (!grouped[item.name]) {
-    grouped[item.name] = 1;
-  } else {
-    grouped[item.name]++;
+    const payment = await response.json();
+    showPaymentResult(payment);
+  } catch (err) {
+    closePaymentModal();
+    alert('Platbu sa nepodarilo vytvoriť. Skús to prosím znova.');
   }
-});
-
-itemsText = "";
-
-Object.keys(grouped).forEach(name => {
-  const count = grouped[name];
-  itemsText += count > 1 ? `${name} ${count}x, ` : `${name}, `;
-});
-
-// remove last comma
-itemsText = itemsText.slice(0, -2);
-
-const qrText = `TOTAL:${total.toFixed(2)}|ITEMS:${itemsText}`;
-
-new QRCode(qr2, {
-  text: qrText,
-  width: 220,
-  height: 220
-});
 }
 
-function showManualPayment(productName, price) {
-  const manualText = `
-IBAN: ${IBAN}
-Name: ${NAME}
-Amount: ${price} EUR
-Message: Payment for ${productName} - Festival Buffet
-  `;
+// OPEN PAYMENT MODAL (SHOWS PROGRESS INDICATOR)
+function openPaymentModal() {
+  stopPaymentPolling();
 
-  alert(manualText); // simple version for now
+  document.getElementById("payment-loading").style.display = "flex";
+  document.getElementById("payment-result").style.display = "none";
+  document.getElementById("payment-modal").style.display = "flex";
+}
+
+// CLOSE PAYMENT MODAL
+function closePaymentModal() {
+  stopPaymentPolling();
+  document.getElementById("payment-modal").style.display = "none";
+}
+
+// SHOW PAYMENT RESULT (AMOUNT, CURRENCY, QR CODE)
+function showPaymentResult(payment) {
+  document.getElementById("payment-amount").textContent = Number(payment.amount).toFixed(2);
+  document.getElementById("payment-currency").textContent = payment.currency;
+
+  const qr = qrcode(0, 'M');
+  qr.addData(payment.paymeLink);
+  qr.make();
+  document.getElementById("payment-qr").innerHTML = qr.createImgTag(6, 8, 'QR platba');
+  document.getElementById("payment-qr").style.display = "block";
+
+  document.getElementById("payment-success").style.display = "none";
+  document.getElementById("payment-checking").style.display = "flex";
+  document.getElementById("payment-failed").style.display = "none";
+
+  document.getElementById("payment-loading").style.display = "none";
+  document.getElementById("payment-result").style.display = "flex";
+
+  startPaymentPolling(payment.variableSymbol);
+}
+
+// START POLLING /api/payment/check UNTIL CONFIRMED OR TIMED OUT
+function startPaymentPolling(variableSymbol) {
+  stopPaymentPolling();
+  paymentVariableSymbol = variableSymbol;
+
+  paymentCheckIntervalId = setInterval(() => checkPaymentNow(), PAYMENT_CHECK_INTERVAL_MS);
+  paymentCheckTimeoutId = setTimeout(showPaymentFailed, PAYMENT_CHECK_TIMEOUT_MS);
+}
+
+// STOP POLLING (MODAL CLOSED / REOPENED / PAYMENT CONFIRMED)
+function stopPaymentPolling() {
+  if (paymentCheckIntervalId !== null) {
+    clearInterval(paymentCheckIntervalId);
+    paymentCheckIntervalId = null;
+  }
+  if (paymentCheckTimeoutId !== null) {
+    clearTimeout(paymentCheckTimeoutId);
+    paymentCheckTimeoutId = null;
+  }
+}
+
+// MANUALLY TRIGGER A CHECK (POLLING TICK OR "SKONTROLOVAŤ ZNOVA" BUTTON)
+async function checkPaymentNow() {
+  if (!paymentVariableSymbol) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/payment/check?vs=${encodeURIComponent(paymentVariableSymbol)}`);
+    if (!response.ok) {
+      return;
+    }
+
+    const result = await response.json();
+    if (result.found) {
+      showPaymentConfirmed();
+    }
+  } catch (err) {
+    // ignore network errors, keep polling / let the user retry
+  }
+}
+
+// SHOW BIG GREEN CHECK
+function showPaymentConfirmed() {
+  stopPaymentPolling();
+
+  document.getElementById("payment-qr").style.display = "none";
+  document.getElementById("payment-checking").style.display = "none";
+  document.getElementById("payment-failed").style.display = "none";
+  document.getElementById("payment-success").style.display = "flex";
+}
+
+// SHOW "PAYMENT DIDN'T GO THROUGH" MESSAGE WITH MANUAL RETRY
+function showPaymentFailed() {
+  stopPaymentPolling();
+
+  document.getElementById("payment-checking").style.display = "none";
+  document.getElementById("payment-failed").style.display = "flex";
 }
