@@ -22,38 +22,36 @@ const saleItems = [
       {
         name: 'Drinks',
         items: [
-          { name: 'Kofola 5dcl', price: 2 },
-          { name: 'Kofola 3dcl', price: 1.5 },
-          { name: 'Vinea 3dcl', price: 1.5 },
-          { name: 'Minerálka 3dcl', price: 1 },
-          { name: 'Džús 2dcl', price: 1.5 },
-          { name: 'Káva', price: 2 },
+          { name: 'Kofola 5dcl', price: 2.41 },
+          { name: 'Vinea 3dcl', price: 1.41 },
+          { name: 'Minerálka 3dcl', price: .82 },
+          { name: 'Džús 2,5dcl', price: 1.41 },
+          { name: 'Káva', price: 1.41 },
+          { name: 'Vlastný pohár', price: -.41 },
         ],
       },
       {
         name: 'Alcohol',
         items: [
-          { name: 'Pivo 5dcl', price: 2 },
-          { name: 'Pivo 3dcl', price: 1.5 },
-          { name: 'Radler 5dcl', price: 2 },
-          { name: 'Radler 3dcl', price: 1.5 },
-          { name: 'Prosecco 2dcl', price: 5 },
-          { name: 'Aperol Spritz 3dcl', price: 7 },
-          { name: 'Gin Tonic', price: 4 },
-          { name: 'Cuba Libre', price: 4 },
+          { name: 'Pivo 5dcl', price: 2.41 },
+          { name: 'Radler 5dcl', price: 2.41 },
+          { name: 'Prosecco 2dcl', price: 3.41 },
+          { name: 'Aperol Spritz 3dcl', price: 4.41 },
+          { name: 'Gin Tonic', price: 4.41 },
+          { name: 'Cuba Libre', price: 4.41 },
         ],
       },
       {
         name: 'Snacks',
         items: [
-          { name: 'Müsli tyčinka', price: 1.5 },
-          { name: 'Oriešková tyčinka', price: 1.5 },
-          { name: 'Horalka', price: 1.5 },
-          { name: 'Snickers', price: 2 },
-          { name: 'Žížaly', price: 2 },
-          { name: 'Soletky', price: 1 },
-          { name: 'Čipsy', price: 1.5 },
-          { name: 'Chrumky', price: 1.5 },
+          { name: 'Oriešková tyčinka', price: .82 },
+          { name: 'Horalka', price: .82 },
+          { name: 'Snickers', price: 1.41 },
+          { name: 'Žížaly', price: .82 },
+          { name: 'Soletky', price: .82 },
+          { name: 'Čipsy', price: .82 },
+          { name: 'Chrumky', price: .82 },
+          { name: 'Arašidy', price: .82 },
         ],
       },
     ],
@@ -182,15 +180,20 @@ function addItem(name, price) {
   saveCart();
 }
 
-//UPDATE TOTAL
-function updateTotal() {
+//CALCULATE CART TOTAL
+function getCartTotal() {
   let total = 0;
 
   cart.forEach(item => {
     total += item.price * item.quantity;
   });
 
-  document.getElementById("doneBtn").textContent = `PAY ${total.toFixed(2)} EUR`;
+  return total;
+}
+
+//UPDATE TOTAL
+function updateTotal() {
+  document.getElementById("doneBtn").textContent = `PAY ${getCartTotal().toFixed(2)} EUR`;
 }
 
 //RENDER CART
@@ -230,10 +233,10 @@ function clearCart() {
 // PAYMENT HELPER VARS
 const API_BASE_URL = '';
 
-const PAYMENT_CHECK_INTERVAL_MS = 5000;
+const PAYMENT_CHECK_INTERVAL_MS = 1000;
 const PAYMENT_CHECK_TIMEOUT_MS = 60000;
 
-let paymentCheckIntervalId = null;
+let paymentCheckPending = false;
 let paymentCheckTimeoutId = null;
 let paymentVariableSymbol = null;
 
@@ -243,34 +246,34 @@ function handleDoneClick() {
     return;
   }
 
-  if (currentSpot === 'tickets') {
-    openPaymentEmailPrompt();
-  } else {
-    createPayment(null);
-  }
+  openPaymentPrompt();
 }
 
-// OPEN PAYMENT MODAL (ASKS FOR OPTIONAL EMAIL BEFORE CREATING THE PAYMENT)
-function openPaymentEmailPrompt() {
+// OPEN PAYMENT MODAL (ASKS FOR THE TOTAL, PLUS AN OPTIONAL NAME FOR 'tickets')
+function openPaymentPrompt() {
   stopPaymentPolling();
 
-  document.getElementById("payment-email-input").value = "";
-  document.getElementById("payment-email").style.display = "flex";
+  document.getElementById("payment-name-input").value = "";
+  document.getElementById("payment-name-group").style.display = currentSpot === 'tickets' ? "flex" : "none";
+  document.getElementById("payment-total-input").value = getCartTotal().toFixed(2);
+  document.getElementById("payment-details").style.display = "flex";
   document.getElementById("payment-loading").style.display = "none";
   document.getElementById("payment-result").style.display = "none";
   document.getElementById("payment-modal").style.display = "flex";
 }
 
-// EMAIL STEP CONFIRMED, CREATE THE PAYMENT
-function submitPaymentEmail() {
-  const email = document.getElementById("payment-email-input").value.trim();
-  createPayment(email);
+// DETAILS STEP CONFIRMED, CREATE THE PAYMENT
+function submitPaymentDetails() {
+  const name = document.getElementById("payment-name-input").value.trim();
+  const totalInput = document.getElementById("payment-total-input").value.trim().replace(',', '.');
+  const total = parseFloat(totalInput);
+  createPayment(name, total);
 }
 
-async function createPayment(email) {
+async function createPayment(name, total) {
   stopPaymentPolling();
 
-  document.getElementById("payment-email").style.display = "none";
+  document.getElementById("payment-details").style.display = "none";
   document.getElementById("payment-loading").style.display = "flex";
   document.getElementById("payment-result").style.display = "none";
   document.getElementById("payment-modal").style.display = "flex";
@@ -284,8 +287,11 @@ async function createPayment(email) {
         price: item.price,
       })),
     };
-    if (email) {
-      body.email = email;
+    if (name) {
+      body.name = name;
+    }
+    if (Number.isFinite(total)) {
+      body.amount = total;
     }
 
     const response = await fetch(`${API_BASE_URL}/api/payment/register`, {
@@ -309,7 +315,7 @@ async function createPayment(email) {
 // CLOSE PAYMENT MODAL
 function closePaymentModal() {
   stopPaymentPolling();
-  document.getElementById("payment-email").style.display = "none";
+  document.getElementById("payment-details").style.display = "none";
   document.getElementById("payment-modal").style.display = "none";
 }
 
@@ -342,20 +348,21 @@ function showPaymentResult(payment) {
 }
 
 // START POLLING /api/payment/check UNTIL CONFIRMED OR TIMED OUT
+// The endpoint itself retries server-side for a few seconds before
+// responding, so the next request is scheduled only after the previous
+// one finishes rather than on a fixed interval on top of that wait.
 function startPaymentPolling(variableSymbol) {
   stopPaymentPolling();
   paymentVariableSymbol = variableSymbol;
+  paymentCheckPending = true;
 
-  paymentCheckIntervalId = setInterval(() => checkPaymentNow(), PAYMENT_CHECK_INTERVAL_MS);
+  checkPaymentNow();
   paymentCheckTimeoutId = setTimeout(showPaymentFailed, PAYMENT_CHECK_TIMEOUT_MS);
 }
 
 // STOP POLLING (MODAL CLOSED / REOPENED / PAYMENT CONFIRMED)
 function stopPaymentPolling() {
-  if (paymentCheckIntervalId !== null) {
-    clearInterval(paymentCheckIntervalId);
-    paymentCheckIntervalId = null;
-  }
+  paymentCheckPending = false;
   if (paymentCheckTimeoutId !== null) {
     clearTimeout(paymentCheckTimeoutId);
     paymentCheckTimeoutId = null;
@@ -378,9 +385,14 @@ async function checkPaymentNow() {
     const result = await response.json();
     if (result.found && paymentVariableSymbol === variableSymbol) {
       showPaymentConfirmed();
+      return;
     }
   } catch (err) {
     // ignore network errors, keep polling / let the user retry
+  } finally {
+    if (paymentCheckPending && paymentVariableSymbol === variableSymbol) {
+      setTimeout(checkPaymentNow, PAYMENT_CHECK_INTERVAL_MS);
+    }
   }
 }
 

@@ -234,12 +234,34 @@ button {
 }
 
 .modal-card {
+  position: relative;
   background: var(--cream);
   border-radius: 18px;
   padding: 24px;
   width: 100%;
   max-width: 320px;
   box-shadow: 0 10px 30px rgba(44,74,54,0.25);
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--terracotta);
+  background: transparent;
+}
+
+.modal-close-btn:hover {
+  background: rgba(155,85,58,0.12);
 }
 
 .modal-card h2 {
@@ -407,19 +429,25 @@ button {
   color: var(--terracotta);
 }
 
-.payment-email {
+.payment-details {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 16px;
 }
 
-.payment-email-input {
+.payment-details-input {
   padding: 14px 16px;
   border-radius: 999px;
   border: 1px solid var(--terracotta);
   font-size: 1rem;
   font-family: inherit;
+}
+
+#payment-name-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 </style>
 </head>
@@ -454,10 +482,15 @@ button {
   <!-- PAYMENT MODAL -->
   <div id="payment-modal" class="modal-overlay">
     <div class="modal-card">
-      <div id="payment-email" class="payment-email" style="display: none;">
-        <h2>Email (nepovinné)</h2>
-        <input type="email" id="payment-email-input" class="payment-email-input" placeholder="tvoj@email.sk" />
-        <div class="done-btn" onclick="submitPaymentEmail()">Pokračovať</div>
+      <div id="payment-details" class="payment-details" style="display: none;">
+        <div class="modal-close-btn" onclick="closePaymentModal()" title="Zavrieť">✕</div>
+        <div id="payment-name-group">
+          <h2>Meno</h2>
+          <input type="text" id="payment-name-input" class="payment-details-input" placeholder="Tvoje meno" />
+        </div>
+        <h2>Suma (EUR)</h2>
+        <input type="text" inputmode="decimal" id="payment-total-input" class="payment-details-input" />
+        <div class="done-btn" onclick="submitPaymentDetails()">Pokračovať</div>
       </div>
       <div id="payment-loading" class="payment-loading" style="display: none;">
         <div class="spinner"></div>
