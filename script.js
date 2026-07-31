@@ -48,6 +48,7 @@ function selectSpot(transactionType) {
   renderCategories();
   updateHeader();
   clearCart();
+  updateScanButton();
 }
 
 // RENDER CATEGORIES + ITEMS
@@ -92,6 +93,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   updateHeader();
   renderCart();
   updateTotal();
+  updateScanButton();
   document.getElementById("payment-total-input").addEventListener("input", updateCashButton);
 });
 
@@ -404,4 +406,105 @@ function showPaymentFailed() {
   document.getElementById("payment-checking").style.display = "none";
   document.getElementById("payment-failed").style.display = "flex";
   document.getElementById("payment-cancel-btn").style.display = "none";
+}
+
+// TICKET SCANNING (TICKETS SPOT ONLY)
+const SCAN_RESULT_DISPLAY_MS = 2500;
+
+let scanStream = null;
+let scanAnimationFrameId = null;
+let scanResultPending = false;
+
+// SHOW/HIDE THE "SKENOVAŤ" BUTTON DEPENDING ON THE CURRENT SPOT
+function updateScanButton() {
+  document.getElementById("scanBtn").style.display = currentSpot === 'tickets' ? "block" : "none";
+}
+
+// OPEN THE SCAN MODAL AND START THE CAMERA
+async function openScanModal() {
+  document.getElementById("scan-result").style.display = "none";
+  document.getElementById("scan-modal").style.display = "flex";
+  scanResultPending = false;
+
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById("scan-video");
+    video.srcObject = scanStream;
+    await video.play();
+    scanAnimationFrameId = requestAnimationFrame(scanFrame);
+  } catch (err) {
+    showScanResult(false, 'Nepodarilo sa získať prístup ku kamere.');
+  }
+}
+
+// CLOSE THE SCAN MODAL AND STOP THE CAMERA
+function closeScanModal() {
+  document.getElementById("scan-modal").style.display = "none";
+
+  if (scanAnimationFrameId !== null) {
+    cancelAnimationFrame(scanAnimationFrameId);
+    scanAnimationFrameId = null;
+  }
+  if (scanStream) {
+    scanStream.getTracks().forEach(track => track.stop());
+    scanStream = null;
+  }
+}
+
+// GRAB A VIDEO FRAME, LOOK FOR A QR CODE, AND SUBMIT IT WHEN FOUND
+function scanFrame() {
+  const video = document.getElementById("scan-video");
+
+  if (!scanResultPending && video.readyState === video.HAVE_ENOUGH_DATA) {
+    const canvas = document.getElementById("scan-canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+    if (code) {
+      submitScan(code.data);
+    }
+  }
+
+  scanAnimationFrameId = requestAnimationFrame(scanFrame);
+}
+
+// SEND THE SCANNED CODE TO THE SERVER FOR VALIDATION
+async function submitScan(code) {
+  scanResultPending = true;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/ticket/scan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+
+    const result = await response.json();
+    if (result.valid) {
+      const who = result.name ? ` – ${result.name}` : '';
+      showScanResult(true, `Vstupenka č. ${result.index}${who} je platná`);
+    } else {
+      showScanResult(false, result.error || 'Neplatná vstupenka.');
+    }
+  } catch (err) {
+    showScanResult(false, 'Vstupenku sa nepodarilo overiť. Skús to prosím znova.');
+  }
+}
+
+// SHOW THE SCAN RESULT BRIEFLY, THEN RESUME SCANNING
+function showScanResult(valid, message) {
+  const resultEl = document.getElementById("scan-result");
+  resultEl.textContent = message;
+  resultEl.className = `scan-result ${valid ? 'scan-result-valid' : 'scan-result-invalid'}`;
+  resultEl.style.display = "block";
+
+  setTimeout(() => {
+    resultEl.style.display = "none";
+    scanResultPending = false;
+  }, SCAN_RESULT_DISPLAY_MS);
 }

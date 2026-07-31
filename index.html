@@ -129,7 +129,7 @@ h2 {
 }
 
 .done-btn {
-  flex: 3;
+  flex: 1;
   background: var(--terracotta);
   color: #fff;
   padding: 20px;
@@ -154,7 +154,7 @@ h2 {
 }
 
 .clear-btn {
-  flex: 1;
+  flex: 0 0 auto;
   background: #fff;
   color: var(--terracotta);
   border: 1px solid var(--terracotta);
@@ -408,6 +408,37 @@ button {
   box-shadow: 0 10px 22px rgba(155,85,58,0.45);
 }
 
+/* TICKET SCAN MODAL */
+.scan-modal-card {
+  max-width: 360px;
+}
+
+.scan-video {
+  width: 100%;
+  border-radius: 12px;
+  background: #000;
+  display: block;
+}
+
+.scan-result {
+  display: none;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.scan-result-valid {
+  background: rgba(40,77,54,0.12);
+  color: var(--darkgreen);
+}
+
+.scan-result-invalid {
+  background: rgba(155,85,58,0.12);
+  color: var(--terracotta);
+}
+
 .spinner-small {
   width: 20px;
   height: 20px;
@@ -472,7 +503,8 @@ button {
     </div>
 
     <div class="bottom">
-      <div class="clear-btn" onclick="clearCart()">CLEAR</div>
+      <div class="clear-btn" onclick="clearCart()">🗑️</div>
+      <div id="scanBtn" class="clear-btn" style="display: none;" onclick="openScanModal()">📷 SCAN</div>
       <div id="doneBtn" class="done-btn" onclick="handleDoneClick()">PAY 0.00 EUR</div>
     </div>
 
@@ -531,7 +563,19 @@ button {
     </div>
   </div>
 
+  <!-- TICKET SCAN MODAL -->
+  <div id="scan-modal" class="modal-overlay" onclick="closeScanModal()">
+    <div class="modal-card scan-modal-card" onclick="event.stopPropagation()">
+      <div class="modal-close-btn" onclick="closeScanModal()" title="Zavrieť">✕</div>
+      <h2>Skenovať vstupenku</h2>
+      <video id="scan-video" class="scan-video" playsinline muted></video>
+      <canvas id="scan-canvas" style="display: none;"></canvas>
+      <div id="scan-result" class="scan-result"></div>
+    </div>
+  </div>
+
   <script src="qrcode.js"></script>
+  <script src="jsQR.js"></script>
   <script src="script.js"></script>
 
 </body>
