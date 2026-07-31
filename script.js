@@ -1,76 +1,13 @@
 // CART DATA
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let currentSpot = localStorage.getItem('currentSpot') || 'bufet';
-const saleItems = [
-  {
-    name: 'Vstup',
-    transactionType: 'tickets',
-    categories: [
-      {
-        name: 'Entry',
-        items: [
-          { name: 'Dospelý (15+)', price: 20 },
-          { name: 'Dieťa (do 15 r.)', price: 10 },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Bufet',
-    transactionType: 'bufet',
-    categories: [
-      {
-        name: 'Drinks',
-        items: [
-          { name: 'Kofola 5dcl', price: 2.41 },
-          { name: 'Vinea 3dcl', price: 1.41 },
-          { name: 'Minerálka 3dcl', price: .82 },
-          { name: 'Džús 2,5dcl', price: 1.41 },
-          { name: 'Káva', price: 1.41 },
-          { name: 'Vlastný pohár', price: -.41 },
-        ],
-      },
-      {
-        name: 'Alcohol',
-        items: [
-          { name: 'Pivo 5dcl', price: 2.41 },
-          { name: 'Radler 5dcl', price: 2.41 },
-          { name: 'Prosecco 2dcl', price: 3.41 },
-          { name: 'Aperol Spritz 3dcl', price: 4.41 },
-          { name: 'Gin Tonic', price: 4.41 },
-          { name: 'Cuba Libre', price: 4.41 },
-        ],
-      },
-      {
-        name: 'Snacks',
-        items: [
-          { name: 'Oriešková tyčinka', price: .82 },
-          { name: 'Horalka', price: .82 },
-          { name: 'Snickers', price: 1.41 },
-          { name: 'Žížaly', price: .82 },
-          { name: 'Soletky', price: .82 },
-          { name: 'Čipsy', price: .82 },
-          { name: 'Chrumky', price: .82 },
-          { name: 'Arašidy', price: .82 },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Gastro',
-    transactionType: 'food',
-    categories: [
-      {
-        name: 'Food',
-        items: [
-          { name: 'Gulášová', price: 4.5 },
-          { name: 'Rezeň so šalátom', price: 8 },
-          { name: 'Hranolky s trhaným mäsom', price: 8 },
-        ],
-      },
-    ],
-  },
-];
+let saleItems = [];
+
+// LOAD SALE ITEMS (SHARED WITH ADMIN STATS VIA web/items.json)
+async function loadSaleItems() {
+  const response = await fetch('../items.json');
+  saleItems = await response.json();
+}
 
 // GET CURRENTLY SELECTED SALE ITEM (SPOT)
 function getCurrentSaleItem() {
@@ -149,11 +86,13 @@ function renderCategories() {
   });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadSaleItems();
   renderCategories();
   updateHeader();
   renderCart();
   updateTotal();
+  document.getElementById("payment-total-input").addEventListener("input", updateCashButton);
 });
 
 // SAVE CART
@@ -260,17 +199,40 @@ function openPaymentPrompt() {
   document.getElementById("payment-loading").style.display = "none";
   document.getElementById("payment-result").style.display = "none";
   document.getElementById("payment-modal").style.display = "flex";
+  updateCashButton();
+}
+
+// UPDATE THE "PLATBA V HOTOVOSTI" BUTTON (BUFET SPOT ONLY): SHOWS THE
+// CURRENT AMOUNT FLOORED TO ONE DECIMAL PLACE
+function updateCashButton() {
+  const cashBtn = document.getElementById("payment-cash-btn");
+
+  if (currentSpot !== 'bufet') {
+    cashBtn.style.display = "none";
+    return;
+  }
+
+  document.getElementById("payment-cash-amount").textContent = `${getFlooredCashAmount().toFixed(2)} EUR`;
+  cashBtn.style.display = "block";
+}
+
+// READS THE (POSSIBLY USER-EDITED) AMOUNT INPUT, FLOORED TO ONE DECIMAL PLACE
+function getFlooredCashAmount() {
+  const totalInput = document.getElementById("payment-total-input").value.trim().replace(',', '.');
+  const total = parseFloat(totalInput);
+  return Number.isFinite(total) ? Math.floor(total * 10) / 10 : 0;
 }
 
 // DETAILS STEP CONFIRMED, CREATE THE PAYMENT
-function submitPaymentDetails() {
+function submitPaymentDetails(paidVia) {
   const name = document.getElementById("payment-name-input").value.trim();
-  const totalInput = document.getElementById("payment-total-input").value.trim().replace(',', '.');
-  const total = parseFloat(totalInput);
-  createPayment(name, total);
+  const total = paidVia === 'cash'
+    ? getFlooredCashAmount()
+    : parseFloat(document.getElementById("payment-total-input").value.trim().replace(',', '.'));
+  createPayment(name, total, paidVia);
 }
 
-async function createPayment(name, total) {
+async function createPayment(name, total, paidVia) {
   stopPaymentPolling();
 
   document.getElementById("payment-details").style.display = "none";
@@ -286,6 +248,7 @@ async function createPayment(name, total) {
         quantity: item.quantity,
         price: item.price,
       })),
+      paidVia: paidVia || 'wire',
     };
     if (name) {
       body.name = name;
@@ -330,6 +293,16 @@ function showPaymentResult(payment) {
   document.getElementById("payment-amount").textContent = Number(payment.amount).toFixed(2);
   document.getElementById("payment-currency").textContent = payment.currency;
 
+  document.getElementById("payment-loading").style.display = "none";
+  document.getElementById("payment-result").style.display = "flex";
+
+  // CASH IS PAID ON THE SPOT: SKIP THE QR CODE AND THE WAIT FOR A MATCHING
+  // BANK TRANSACTION, JUST SHOW THE SUCCESS CHECK RIGHT AWAY
+  if (payment.paidVia === 'cash') {
+    showPaymentConfirmed();
+    return;
+  }
+
   const qr = qrcode(0, 'M');
   qr.addData(payment.paymeLink);
   qr.make();
@@ -340,9 +313,6 @@ function showPaymentResult(payment) {
   document.getElementById("payment-checking").style.display = "flex";
   document.getElementById("payment-failed").style.display = "none";
   document.getElementById("payment-cancel-btn").style.display = "flex";
-
-  document.getElementById("payment-loading").style.display = "none";
-  document.getElementById("payment-result").style.display = "flex";
 
   startPaymentPolling(payment.variableSymbol);
 }

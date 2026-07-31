@@ -146,6 +146,13 @@ h2 {
   box-shadow: 0 10px 22px rgba(155,85,58,0.45);
 }
 
+#payment-cash-btn {
+  background: transparent;
+  color: var(--terracotta);
+  border: 2px solid var(--terracotta);
+  box-shadow: none;
+}
+
 .clear-btn {
   flex: 1;
   background: #fff;
@@ -490,7 +497,8 @@ button {
         </div>
         <h2>Suma (EUR)</h2>
         <input type="text" inputmode="decimal" id="payment-total-input" class="payment-details-input" />
-        <div class="done-btn" onclick="submitPaymentDetails()">Pokračovať</div>
+        <div class="done-btn" onclick="submitPaymentDetails('wire')">Pokračovať</div>
+        <div id="payment-cash-btn" class="done-btn" style="display: none;" onclick="submitPaymentDetails('cash')">Platba v hotovosti: <span id="payment-cash-amount"></span></div>
       </div>
       <div id="payment-loading" class="payment-loading" style="display: none;">
         <div class="spinner"></div>
