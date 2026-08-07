@@ -433,7 +433,7 @@ async function openScanModal() {
     await video.play();
     scanAnimationFrameId = requestAnimationFrame(scanFrame);
   } catch (err) {
-    showScanResult(false, 'Nepodarilo sa získať prístup ku kamere.');
+    showScanResult('invalid', 'Nepodarilo sa získať prístup ku kamere.');
   }
 }
 
@@ -487,20 +487,25 @@ async function submitScan(code) {
     const result = await response.json();
     if (result.valid) {
       const who = result.name ? ` – ${result.name}` : '';
-      showScanResult(true, `Vstupenka č. ${result.index}${who} je platná`);
+      if (result.scanCount > 1) {
+        showScanResult('warning', `⚠️ Vstupenka č. ${result.index}${who} už bola naskenovaná (${result.scanCount}x)`);
+      } else {
+        showScanResult('valid', `Vstupenka č. ${result.index}${who} je platná`);
+      }
     } else {
-      showScanResult(false, result.error || 'Neplatná vstupenka.');
+      showScanResult('invalid', result.error || 'Neplatná vstupenka.');
     }
   } catch (err) {
-    showScanResult(false, 'Vstupenku sa nepodarilo overiť. Skús to prosím znova.');
+    showScanResult('invalid', 'Vstupenku sa nepodarilo overiť. Skús to prosím znova.');
   }
 }
 
 // SHOW THE SCAN RESULT BRIEFLY, THEN RESUME SCANNING
-function showScanResult(valid, message) {
+// status is one of 'valid', 'invalid', 'warning' (already scanned before)
+function showScanResult(status, message) {
   const resultEl = document.getElementById("scan-result");
   resultEl.textContent = message;
-  resultEl.className = `scan-result ${valid ? 'scan-result-valid' : 'scan-result-invalid'}`;
+  resultEl.className = `scan-result scan-result-${status}`;
   resultEl.style.display = "block";
 
   setTimeout(() => {
