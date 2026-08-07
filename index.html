@@ -339,6 +339,7 @@ button {
   padding: 8px;
   box-shadow: 0 6px 20px rgba(44,74,54,0.12);
   line-height: 0;
+  cursor: pointer;
 }
 
 .payment-qr img {
@@ -346,6 +347,13 @@ button {
   width: 100%;
   max-width: 240px;
   height: auto;
+}
+
+.payment-qr-label {
+  font-size: 0.85rem;
+  color: var(--terracotta);
+  font-weight: bold;
+  text-align: center;
 }
 
 .payment-checking {
@@ -545,7 +553,8 @@ button {
         <div class="payment-amount">
           <span id="payment-amount"></span>&nbsp;<span id="payment-currency"></span>
         </div>
-        <div id="payment-qr" class="payment-qr"></div>
+        <div id="payment-qr" class="payment-qr" onclick="togglePaymentQr()"></div>
+        <div id="payment-qr-label" class="payment-qr-label"></div>
         <div id="payment-success" class="payment-success" style="display: none;">✓</div>
 
         <div id="payment-checking" class="payment-checking">

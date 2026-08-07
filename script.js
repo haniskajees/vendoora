@@ -181,6 +181,9 @@ let paymentCheckPending = false;
 let paymentCheckTimeoutId = null;
 let paymentVariableSymbol = null;
 
+let currentQrPayment = null;
+let showingPayBySquareQr = false;
+
 // PAY BUTTON
 function handleDoneClick() {
   if (cart.length === 0) {
@@ -305,10 +308,9 @@ function showPaymentResult(payment) {
     return;
   }
 
-  const qr = qrcode(0, 'M');
-  qr.addData(payment.paymeLink);
-  qr.make();
-  document.getElementById("payment-qr").innerHTML = qr.createImgTag(6, 8, 'QR platba');
+  currentQrPayment = payment;
+  showingPayBySquareQr = false;
+  renderPaymentQr();
   document.getElementById("payment-qr").style.display = "block";
 
   document.getElementById("payment-success").style.display = "none";
@@ -317,6 +319,32 @@ function showPaymentResult(payment) {
   document.getElementById("payment-cancel-btn").style.display = "flex";
 
   startPaymentPolling(payment.variableSymbol);
+}
+
+// RENDER THE QR FOR WHICHEVER PAYMENT METHOD IS CURRENTLY SELECTED, PLUS THE
+// LABEL UNDERNEATH IT
+function renderPaymentQr() {
+  if (!currentQrPayment) {
+    return;
+  }
+
+  const data = showingPayBySquareQr ? currentQrPayment.payBySquare : currentQrPayment.paymeLink;
+
+  const qr = qrcode(0, 'M');
+  qr.addData(data);
+  qr.make();
+  document.getElementById("payment-qr").innerHTML = qr.createImgTag(6, 8, 'QR platba');
+  document.getElementById("payment-qr-label").textContent = showingPayBySquareQr ? 'Pay by square' : 'Payme';
+}
+
+// QR CODE TAPPED: SWITCH BETWEEN THE PAYME AND PAY BY SQUARE QR CODES
+function togglePaymentQr() {
+  if (!currentQrPayment) {
+    return;
+  }
+
+  showingPayBySquareQr = !showingPayBySquareQr;
+  renderPaymentQr();
 }
 
 // START POLLING /api/payment/check UNTIL CONFIRMED OR TIMED OUT
